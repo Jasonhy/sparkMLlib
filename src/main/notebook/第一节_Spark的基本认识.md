@@ -401,8 +401,131 @@ MLlib支持用于判断拟合度或者独立的Pearson卡方检验,不同的输�
 
     统计量为pearson,自由度为1,值为5.48,概率为0.0192
 
+## MLlib数据格式
 
+### 数据处理
 
+MLUtils用于辅助加载,保存,处理MLlib相关算法所需要的数据,其中主要的方法是loadLibSVMFile,用于加载LIBSVM
+格式数据,返回RDD[LabeledPoint]格式数据,该数据格式可以用于分类,回归等算法中
 
+loadLibSVMFile:
+
+    /**
+      * loadLibSVMFile
+      * 加载LIBSVM格式数据,返回RDD[LabeledPoint]
+      * LabeledPoint格式:
+      *   (label: Double,features: Vector),label代表标签,features代表特征向量
+      * 输入LIBSVM格式的数据,格式如下:
+      * {{{label index1:value1 index2:value2 ...}}}
+      * label代表标签,value代表特征,index代表特征位置索引
+      */
+      
+    如:
+        scala> import org.apache.spark.mllib.util._
+        import org.apache.spark.mllib.util._
+        
+        scala> val data = MLUtils.loadLibSVMFile(sc,"D:\\java_workplace\\sparkMLlib\\src\\data\\sample_libsvm_data.txt")
+        data: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] = MapPartitionsRDD[6] at map at MLUtils.scala:86
+        
+        scala> data.take(1)
+        res0: Array[org.apache.spark.mllib.regression.LabeledPoint] = Array((0.0,(692,[127,128,129,130,131,154,155,156,157,158,159,181,182,183,184,185,186,187,188,189,207,208,209,210,211,212,213,214,215,216,217,235,236,237,238,239,240,241,242,243,244,245,262,263,264,265,266,267,268,269,270,271,272,273,289,290,291,292,293,294,295,296,297,300,301,302,316,317,318,319,320,321,328,329,330,343,344,345,346,347,348,349,356,357,358,371,372,373,374,384,385,386,399,400,401,412,413,414,426,427,428,429,440,441,442,454,455,456,457,466,467,468,469,470,482,483,484,493,494,495,496,497,510,511,512,520,521,522,523,538,539,540,547,548,549,550,566,567,568,569,570,571,572,573,574,575,576,577,578,594,595,596,597,598,599,600,601,602,603,604,622,623,624,625,626,627,628,629,630,651,652,653,654,655,656,657],[51.0,159.0,2...
+    
+saveAsLibSVMFile: 将LIBSVM格式数据保存到指定文件中
+
+appendBias: 对向量增加偏置项,用于回归和分类算法中
+
+fastSquaredDistance:快速计算距离的方法
+
+    主要用于K-means聚类算法中
+    fastSquaredDistance会先计算一个精度, 有关的精度计算:
+        precisionBound1 = 2.0 * EPSILON * sumSquaredNorm / (normDiff * normDiff + EPSILON)
+    如果在精度满足条件的情况下,则欧氏距离: EuclideanDist = sumSquaredNorm - 2.0 * v1.dot(v2)
+    如果精度不满足,则按原始距离公式进行计算: (a1 - a2) ^ 2 + (b1 - b2) ^ 2
+    
+generateKMeansRDD: 样本生成
+
+    用于生成KMeans的训练数据,格式为RDD[Array[Double]],参数如下:
+        sc: SparkContext
+        numPoint: RDD中包括的数据量
+        k: 聚类数
+        d: 数据维度
+        r: 初始中心分布的缩放因子
+        numPartitions: RDD的分区数        
+    
+    示例: 随机生成40个样本,数据维度为三维,聚类中心为5
+        
+        scala> import org.apache.spark.mllib.util._
+        import org.apache.spark.mllib.util._
+        
+        scala> val KMeansRDD = KMeansDataGenerator.generateKMeansRDD(sc,40,5,3,1.0,2)
+        KMeansRDD: org.apache.spark.rdd.RDD[Array[Double]] = MapPartitionsRDD[1] at map at KMeansDataGenerator.scala:60
+        
+        scala> KMeansRDD.count()
+        res0: Long = 40
+        
+        scala> KMeansRDD.take(5)
+        res1: Array[Array[Double]] = Array(Array(2.2838106309461095, 1.8388158979655758, -1.8997332737817918), Array(-0.6536454069660477, 0.9840269254342955, 0.19763938858718594), Array(0.24415182644986977, -0.4593305783720648, 0.3286249752173309), Array(1.8793621718715983, 1.4433606519575122, -0.9420612755690412), Array(2.7663276890005077, -1.4673057796056233, 0.39691668230812227))
+
+generateLinearRDD: 生成线性回归训练样本数据,格式为RDD[LabeledPoint]
+
+    参数:
+        sc: SparkContext
+        nexamples: RDD中包括的数据量
+        nfeature: 样本的特征数
+        eps: Epsilon因子
+        nparts: RDD分区数
+        
+    示例: 随机生成40个样本,数据维度为三维
+        scala> val LinearRDD = LinearDataGenerator.generateLinearRDD(sc,40,3,1.0,2,0.0)
+        LinearRDD: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] = MapPartitionsRDD[3] at flatMap at LinearDataGenerator.scala:183
+        
+        scala> LinearRDD.count()
+        res2: Long = 40
+        
+        scala> LinearRDD.take(5)
+        res3: Array[org.apache.spark.mllib.regression.LabeledPoint] = Array((-0.9875339179115987,[0.4551273600657362,0.36644694351969087,-0.38256108933468047]), (1.135787192337867,[0.8067445293443565,-0.2624341731773887,-0.44850386111659524]), (-0.4741621894439617,[-0.07269284838169332,0.5658035575800715,0.8386555657374337]), (1.371466825495126,[-0.22686625128130267,-0.6452430441812433,0.18869982177936828]), (0.6347733840587794,[-0.5804648622673358,0.651931743775642,-0.6555641246242951]))
+
+generateLogisticRDD: 生成逻辑回归训练样本数据
+
+    参数:
+        sc: SparkContext
+        nexamples: RDD中包括的数据量
+        nfeature: 样本的特征数
+        eps: Epsilon因子
+        nparts: RDD分区数
+        probOne: 标签1的概率
+        
+    示例: 随机生成40个样本,数据维度为三维,标签1的概率为0.5
+        scala> val LogisticRDD = LogisticRegressionDataGenerator.generateLogisticRDD(sc,40,3,1.0,2,0.5)
+        LogisticRDD: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] = MapPartitionsRDD[5] at map at LogisticRegressionDataGenerator.scala:55
+        
+        scala> LogisticRDD.count()
+        res4: Long = 40
+        
+        scala> LogisticRDD.take(5)
+        res5: Array[org.apache.spark.mllib.regression.LabeledPoint] = Array((0.0,[1.1419053154730547,0.9194079489827879,-0.9498666368908959]), (1.0,[1.4533448794332902,1.703049287361516,0.5130165929545305]), (0.0,[1.0613732338485966,0.9373128243059786,0.519569488288206]), (1.0,[1.3931487794809478,1.6410535022701498,0.17945164909645228]), (0.0,[1.3558214650566454,-0.8270729973920494,1.6065611415614136]))
+
+#### 其他数据生成
+
+    1) SVM: SVMGenerate
+            参数说明:
+            master: 集群Master地址
+            output_dir: 样本输出路径
+            num_examples: 样本数量
+            num_features: 样本特征数量
+            num_partition: 样本RDD分区数
+            
+    2) MFD: MFDataGenerate
+            参数说明:
+            master: 集群Master地址
+            output_dir: 样本输出路径
+            m: 矩阵行数
+            n: 矩阵列数
+            rank: 矩阵秩
+            trainSampFact: 采样因子
+            noise: 是否增加噪音
+            sigma: 高斯噪音标准差
+            test: 是否测试
+            testSampFact: 测试比列
 
 
