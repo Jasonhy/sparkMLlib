@@ -8,10 +8,36 @@
     <artifactId>sparkMLlib</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <properties>
+        <!--spark 和Scala的版本是对应的-->
+        <spark.version>2.3.1</spark.version>
+        <scala.version>2.11</scala.version>
+        <hanlp.version>portable-1.5.3</hanlp.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.11</artifactId>
+            <artifactId>spark-core_${scala.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-mllib_${scala.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <!-- 中文分词框架 -->
+        <dependency>
+            <groupId>com.hankcs</groupId>
+            <artifactId>hanlp</artifactId>
+            <version>${hanlp.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
             <version>2.3.1</version>
         </dependency>
     </dependencies>
