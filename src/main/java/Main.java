@@ -1,13 +1,47 @@
+import bean.BaseBean;
+import bean.QQBean;
+import config.Config;
+import helper.ESHandler;
+import helper.Segment;
+import model.THKMeans;
+import util.FileUtil;
+import util.GsonUtil;
+
+import java.net.UnknownHostException;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args){
-        String words = "50832任何一个销售行业都需要人脉，人脉的多少决定了您产品的收益。太多创业者无法实现盈利，最主要的原因不是产品不好，而是没有客户。智能营销机器人帮助你寻找意向客户，月加30W客户。代理或了解产品添加2492249308,支持实地考察！";
+        FileUtil instance = FileUtil.getInstance();
         Segment segment = Segment.getInstance();
-        List<String> nlp = segment.nlp(words);
-        // System.out.println(nlp);
-        String filePath = "D:\\java_workplace\\sparkMLlib\\src\\data\\es_data.json";
-        DataHandler handler = DataHandler.getInstance();
-        handler.handlerData(filePath);
+        Config config = new Config();
+        config.setPredictFilePath("");
+        config.setTrainFilePath("");
+        List<String> datas = instance.readByList(config.getPredictFilePath(), "utf-8");
+        THKMeans thkMeans = new THKMeans();
+        thkMeans.train(config,false);
+        for(int i=0; i<datas.size(); i++){
+            String beanStr = datas.get(i);
+            BaseBean baseBean = GsonUtil.parseJsonWithGson(beanStr, BaseBean.class);
+            baseBean.setWords(segment.nlp(baseBean.getBody()));
+            QQBean qqBean = GsonUtil.parseJsonWithGson(beanStr, QQBean.class);
+            if(baseBean.getWords().size() < 3 || beanStr.contains("加入本群")){
+                continue;
+            }
+            System.out.println("======= " + baseBean.getWords());
+            // 如果tag为true,则将数据插入es,否则不插入
+            boolean tag = thkMeans.predict(baseBean);
+            if (tag){
+                try {
+                    // 数据插入ES
+                    ESHandler.init();
+                    String res = ESHandler.insertByJson("qq_unique", "qq_unique_type", beanStr, qqBean.getUid());
+                    System.out.println(">>> " + res);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+            }
+            break;
+        }
     }
 }
